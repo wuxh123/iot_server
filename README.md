@@ -10,9 +10,9 @@ vs code
 pip install pylint
 
 ## python库
-1.pip install mysql-connector
-2.pip install mysqlclient
-pip isntall paho-mqtt
-pip install protobuf
-pip install pymongo
-pip install redis
+ pip install mysql-connector
+ pip install mysqlclient
+ pip isntall paho-mqtt
+ pip install protobuf
+ pip install pymongo
+ pip install redis
