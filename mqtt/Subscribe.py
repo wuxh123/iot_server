@@ -39,8 +39,8 @@ class Mqtt_client():
         client = mqtt.Client(client_id=client_id)
     
         # If broker asks user/password.
-        user = "admin"
-        password = "123456aa??"
+        user = self.usr
+        password = self.password
         client.username_pw_set(user, password)
     
         client.on_connect = self.on_connect
@@ -74,8 +74,5 @@ class Mqtt_client():
         mqtt_looping = False
 
 if __name__ == '__main__':
-    mqttfunc = Mqtt_client()
-    mqttfunc.mqtt_client_thread()
-
     print ("exit program")
     
