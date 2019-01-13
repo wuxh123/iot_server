@@ -11,8 +11,13 @@ pip install pylint
 
 ## python库
  pip install mysql-connector
+ 
  pip install mysqlclient
+ 
  pip isntall paho-mqtt
+ 
  pip install protobuf
+ 
  pip install pymongo
+ 
  pip install redis
