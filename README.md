@@ -41,6 +41,15 @@ pip install pylint
  
  ## 其他
  通过模拟多device操作，每毫秒发送数据，未发生数据丢失，粘包。cpu符合在5%以下。
-  
+ 
+ ## 运行
+ python main.py
+ 
+ ## 测试
+ python test.py
+ 
+ ## 其他
+ 如果觉得python性能不够好（我觉得不错的），可以改为pypy
+ 
  ## 先写说明之后上代码
  
