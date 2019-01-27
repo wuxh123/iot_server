@@ -3,8 +3,10 @@
 
 import socket
 import select
-import queue
-from common import common
+import os
+from common import gl
+
+filename=os.path.basename(os.path.realpath(__file__))
 
 class my_epoll():
     def __init__(self,ip,port,timeout):
@@ -29,21 +31,29 @@ class my_epoll():
         #注册服务器监听fd到等待读事件集合
         self.epoll.register(self.serversocket.fileno(), select.EPOLLIN)
         #文件句柄到所对应对象的字典，格式为{句柄：对象}
-        self.fd_to_socket = {self.serversocket.fileno():self.serversocket,}
+        #gl.fd_to_socket = {self.serversocket.fileno():self.serversocket,}        
+        gl.fd_to_socket[self.serversocket.fileno()] =self.serversocket
+    
+    '''def send_event(self):
+        for fd,socket in gl.fd_to_socket.items():
+            print(fd,socket)
+            if (socket != self.serversocket):
+                print("%"*20)
+                socket.send("1234567890我的".encode('gbk'))'''
         
-    def run(self):
+    def run(self,parseHandler):
+        print("*"*50)
         while True:
-            print("等待活动连接......")
+            gl.log.debug(filename+"-waitting for active conection......")
             #轮询注册的事件集合，返回值为[(文件句柄，对应的事件)，(...),....]
-            print(self.timeout)
             events = self.epoll.poll(self.timeout)
             if not events:
-                print("self.epoll超时无活动连接，重新轮询......")
+                gl.log.debug(filename+"-self.epoll timeout,rewait......")
                 continue
-            print("有" , len(events), "个新事件，开始处理......")
+            gl.log.debug(filename+"-have{} new event，parse......".format(len(events)))
 
             for fd, event in events:
-                socket = self.fd_to_socket[fd]
+                socket = gl.fd_to_socket[fd]
                 #如果活动socket为当前服务器socket，表示有新连接
                 if socket == self.serversocket:
                     connection, address = self.serversocket.accept()
@@ -53,41 +63,45 @@ class my_epoll():
                     #注册新连接fd到待读事件集合
                     self.epoll.register(connection.fileno(), select.EPOLLIN)
                     #把新连接的文件句柄以及对象保存到字典
-                    self.fd_to_socket[connection.fileno()] = connection
+                    gl.fd_to_socket[connection.fileno()] = connection
                     #以新连接的对象为键值，值存储在队列中，保存每个连接的信息
-                    common.message_queues[connection]  = queue.Queue()
+                    #gl.message_queues[connection]  = queue.Queue()
                 #关闭事件
                 elif (event & select.EPOLLHUP):
                     print('client close')
                     #在self.epoll中注销客户端的文件句柄
                     self.epoll.unregister(fd)
                     #关闭客户端的文件句柄
-                    self.fd_to_socket[fd].close()
+                    gl.fd_to_socket[fd].close()
                     #在字典中删除与已关闭客户端相关的信息
-                    del self.fd_to_socket[fd]
+                    del gl.fd_to_socket[fd]
                 #可读事件
                 elif event & select.EPOLLIN:
                     #接收数据
                     data = socket.recv(1024)
                     if data:
                         print("收到数据：" , data , "客户端：" , socket.getpeername())
+                        gl.executor_e.submit(parseHandler,({'fd':fd,'data':data}))
+                        #parseHandler({'fd':fd,'data':data})
                         #将数据放入对应客户端的字典
-                        common.message_queues[socket].put(data)
+                        #gl.message_queues[socket].put(data)
                         #修改读取到消息的连接到等待写事件集合(即对应客户端收到消息后，再将其fd修改并加入写事件集合)
-                        self.epoll.modify(fd, select.EPOLLOUT)
+                        #self.epoll.modify(fd, select.EPOLLOUT)
                     else:
                         print('client close')
                         #在self.epoll中注销客户端的文件句柄
                         self.epoll.unregister(fd)
                         #关闭客户端的文件句柄
-                        self.fd_to_socket[fd].close()
+                        gl.fd_to_socket[fd].close()
                         #在字典中删除与已关闭客户端相关的信息
-                        del self.fd_to_socket[fd]
+                        del gl.fd_to_socket[fd]
                 #可写事件
-                elif event & select.EPOLLOUT:
+                '''elif event & select.EPOLLOUT:
                     try:
+                        print("^"*50)
+                        print(gl.message_queues)
                         #从字典中获取对应客户端的信息
-                        msg = common.message_queues[socket].get_nowait()
+                        msg = gl.message_queues[socket].get_nowait()
                     except queue.Empty:
                         print(socket.getpeername() , " queue empty")
                         #修改文件句柄为读事件
@@ -95,7 +109,7 @@ class my_epoll():
                     else :
                         print("发送数据：" , data , "客户端：" , socket.getpeername())
                         #发送数据
-                        socket.send(msg)
+                        socket.send(msg)'''
 
         #在self.epoll中注销服务端文件句柄
         self.epoll.unregister(self.serversocket.fileno())
@@ -103,7 +117,3 @@ class my_epoll():
         self.epoll.close()
         #关闭服务器socket
         self.serversocket.close()
-
-if __name__=='__main__':
-    myepoll=my_epoll("0.0.0.0",9997,10)
-    myepoll.run()

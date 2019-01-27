@@ -5,7 +5,8 @@ import paho.mqtt.client as mqtt
 import time
 import sys
 sys.path.append("..") 
-from common import common
+from common import gl
+from bis.bis import parseMqttData
 
 class MqttClient:
     client_id = time.strftime('%Y%m%d%H%M%S',time.localtime(time.time()))
@@ -24,10 +25,19 @@ class MqttClient:
 
     def connect(self,):
         self.client.username_pw_set(self._user, self._password)  # 必须设置，否则会返回「Connected with result code 4」
-        self.client.connect(self._host, self._port, self._timeout)
+        while True:
+            try:
+                self.client.connect(self._host, self._port, self._timeout)
+                break
+            except:
+                gl.log.error("MQTT connect error,waitting for reconnect")
+                time.sleep(3)
+                continue
+        
 
     def publish(self, topic, data):
         print("publish:"+topic)
+        #todo 将所有的id从数据库中取出，到mqtt上定于该id的主题
         self.client.publish(topic, data)
 
     def loop(self, timeout=None):
@@ -44,10 +54,11 @@ class MqttClient:
 
     def _on_connect(self, client, userdata, flags, rc):
         print("\nConnected with result code " + str(rc))
-        client.subscribe("mqtt/test/#")
+        self.client.subscribe(gl.mqtt_down)
 
     def _on_message(self, client, userdata, msg):  # 从服务器接受到消息后回调此函数
-        print(msg.topic+" "+msg.payload.decode("utf-8"))
+        print(msg.topic+" "+msg.payload.decode("gbk"))
+        gl.executor_mqtt.submit(parseMqttData,({'topic':msg.topic,'data':msg.payload}))
 
     def _on_publish(self,client, userdata, mid):
         print("data sended.")
@@ -55,12 +66,9 @@ class MqttClient:
     def _on_disconnect(self,client, userdata, rc):
         print("connect disconnected")
 
-    def publish_loop(self):
-        pass
-
-    def run(self):
+'''    def run(self):
         client = MqttClient("172.29.140.58", 63613,"test","test",60)
-        client.connect()
+        client.connect()'''
 
 
 '''client1 = MqttClient("172.29.140.58", 63613,"test","test",60)

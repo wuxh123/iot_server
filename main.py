@@ -2,80 +2,55 @@
 #-*- coding:utf-8 -*-
 
 import os
+import sys
+import time
+import signal
+import threading
+
+from common import gl
 from cfg.Config import Cfg
 from my_sql.mysqlHelper import MyDB
 from mongo.mongo import MyMongoDB
 from my_redis.CRedis import RedisHelper,CRedis
-import mqtt
+from my_mqtt.my_mqtt  import MqttClient
+from my_epoll.my_epoll import my_epoll
+from concurrent.futures import ThreadPoolExecutor
+from bis.bis import parseDevData
 
-def _log(fn):
-    def logme(*args):
-        print("_"*20)
-        fn(*args)
-    
-    return logme 
+filename=os.path.basename(os.path.realpath(__file__))
 
-@_log
-def test_single_cfg():
-    cfg=Cfg()
-    cfg=Cfg()
-    print(cfg.db_host,cfg.db_user,cfg.db_pass,cfg.db_port,cfg.db_database)
-    #print others
+def init():
+    pass
 
-@_log
-def test_mysql():
-    print("test mysql")
-    cfg=Cfg()
-    mydb = MyDB(cfg.db_host,cfg.db_user,cfg.db_pass,cfg.db_port,cfg.db_database)
-    #创建表
-    #mydb.create_table('create table user (id varchar(20) primary key, name varchar(20))')
-    #插入数据
-    id=mydb.execute_update_insert("insert into user (name) values  ('Michael')")
-    print("lastid="+str(id))
-    # 查询数据表
-    results = mydb.query("SELECT * FROM user")
-    print(results)
-    for row in results:
-        id = row[0]
-        name = row[1]
-        print("id=%s,name=%s" % \
-               (id, name))
-    list = mydb.query_formatrs("SELECT * FROM user")
-    for i in list:
-        print ("记录号：%s   值：%s" % (list.index(i) + 1, i))
-    #关闭数据库
-    mydb.close()
+#启动mqtt接收服务
+def start_mqtt():   
+    gl.mqtt_client=MqttClient(gl.cfg.mqtt_ip, gl.cfg.mqtt_port,gl.cfg.mqtt_user,gl.cfg.mqtt_pass,gl.cfg.mqtt_timout)
+    gl.mqtt_client.connect()
+    task=gl.executor_main.submit(gl.mqtt_client._loop,(None))
+    task.Daemon=True
 
-@_log
-def test_mongo():
-    cfg=Cfg()
-    dic={"name":"zhangsan","age":18}
-    mongo = MyMongoDB(cfg.mongo_ip,cfg.mongo_port,cfg.mongo_db_name,cfg.mongo_set_name)
-    mongo.insert(dic)
-    print("insert complete")
-    
-    mongo.dbfind({"name":"zhangsan"})
+#启动epoll接收服务
+def start_epoll():
+    gl.epoll=my_epoll(gl.cfg.sock_ip,gl.cfg.sock_port,gl.cfg.sock_timeout)
+    task=gl.executor_main.submit(gl.epoll.run,(parseDevData))
+    task.Daemon=True
 
-    mongo.update({"name":"zhangsan"},{"$set":{"age":"25"}})
-    mongo.dbfind({"name":"zhangsan"})
-
-    mongo.delete({"name":"zhangsan"})
-    mongo.dbfind({"name":"zhangsan"})
-
-@_log
-def test_redis():
-    cfg=Cfg()
-    _redis = CRedis()
-    _redis.connect(cfg.redis_ip,cfg.redis_pass,cfg.redis_port)    
-
-@_log
-def test_mqtt():
-    publish=mqtt.Publish.Mqtt_publish()
-
-if __name__ == "__main__":
-    test_single_cfg()
-    test_mysql()
-    test_mongo()
-    test_redis()
-
-
+if __name__ == "__main__":   
+    gl.log.debug(filename+"-"*20)
+    gl.log.debug(("pid={}".format(os.getpid())))
+    gl.log.debug(filename+"-"*20) 
+    init()
+    start_epoll()
+    start_mqtt()
+ 
+    gl.log.debug("-------------run------------")
+    '''while(True):
+        print("start socket send..")
+        #gl.epoll.send_event()
+        time.sleep(20)
+    sys.exit()'''
+'''    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    print("11111")'''

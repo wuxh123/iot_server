@@ -1,0 +1,7 @@
+pip install mysql-connector
+pip install mysqlclient
+pip isntall paho-mqtt
+pip install protobuf
+pip install pylint
+pip install pymongo
+pip install redis
