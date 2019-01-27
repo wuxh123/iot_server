@@ -53,5 +53,5 @@ pip install pylint
  
  2.数据粘包比较麻烦，我测试过，如果线程池是20，每毫秒3条数据会粘包。线程池50的话就没有发生粘包。
  
- ## 先写说明之后上代码
- 
+ ## 设备A通过epoll链接到iot server，server将其注册到mqtt broker
+ ![效果](https://github.com/wuxh123/iot_server/img/1.img)
