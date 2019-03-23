@@ -23,15 +23,13 @@ pip install pylint
  ## 功能
  1.设备通过socket连接到服务器
  
- 2.保存设备id
+ 2.Iot server保存设备id
  
- 3.通过mqtt发布到mqtt broker
+ 3.通过设备id订阅该设备的消息
  
- 4.订阅该设备的消息
+ 4.中心通过该设备的定于发送指令
  
- 5.中心通过该设备的定于发送指令
- 
- 6.通过该server，将mqtt指令转发给具体的socket，实现数据透明传输。
+ 5.通过该server，将mqtt指令转发给具体的socket，实现数据透明传输。
  
  
  ## 特点
@@ -40,7 +38,7 @@ pip install pylint
  2.采用mqtt+threadpoll 处理指令。
  
  ## 其他
- 通过模拟多device操作，每毫秒发送数据，未发生数据丢失，粘包。cpu符合在5%以下。
+ 通过模拟多device操作，每毫秒发送数据，未发生数据丢失，粘包。cpu负荷在5%以下。
  
  ## 运行
  python main.py
